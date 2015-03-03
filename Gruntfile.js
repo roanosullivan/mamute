@@ -16,6 +16,31 @@ module.exports = function(grunt) {
 		ignored: 'src/main/webapp/assets/grunt-ignore/'
 	};
 
+	/**
+	 * Seems like filerev should match with windows-compatible filenames in the summary ...
+	 * https://github.com/cbas/grunt-filerev/commit/1dfe96cec9850e1812c9aead45ba5c07cd1f8a1d.
+	 *
+	 * But it doesn't. 
+	 *
+     * So instead, we need to transform the paths so that matches are correctly detected, 
+     * per example in this thread:
+     * http://stackoverflow.com/questions/26769093/grunt-usemin-not-replacing-reference-block-with-revved-file-line
+	 */
+	function path2filerev(block){
+		grunt.log.debug(JSON.stringify(config.webapp));
+		grunt.log.debug(JSON.stringify(block.dest));
+		grunt.log.debug(JSON.stringify(grunt.filerev.summary));
+		var arr = {};
+	    for (var key in grunt.filerev.summary) {
+	        arr[key.replace(/\\/g, "/").replace("src/main/webapp","")] = 
+	        	grunt.filerev.summary[key].replace(/\\/g, "/").replace("src/main/webapp","");
+	    }
+		grunt.log.debug(JSON.stringify(arr));
+	    var path = (arr[block.dest] !== undefined) ? arr[block.dest] : block.dest;
+		grunt.log.debug(JSON.stringify(path));
+		return path;
+	}
+
 	grunt.initConfig({
 		config: config,
 
@@ -113,25 +138,11 @@ module.exports = function(grunt) {
 				assetsDirs: ['<%= config.webapp %>'],
 				blockReplacements: {
 					css: function (block) {
-						return '<link rel="stylesheet" href="${contextPath}' + block.dest + '"/>';
+						var path = path2filerev(block);
+						return '<link rel="stylesheet" href="${contextPath}' + path + '"/>';
 					},
 					js: function (block) {
-						grunt.log.debug(JSON.stringify(config.webapp));
-						grunt.log.debug(JSON.stringify(block.dest));
-            			grunt.log.debug(JSON.stringify(grunt.filerev.summary));
-						// Seems like filerev should match with windows-compatible filenames in the summary ...
-						// https://github.com/cbas/grunt-filerev/commit/1dfe96cec9850e1812c9aead45ba5c07cd1f8a1d
-						// ... but it doesn't. 
-						// So instead, we need to monkey path it here, per example in this thread:
-						// http://stackoverflow.com/questions/26769093/grunt-usemin-not-replacing-reference-block-with-revved-file-line
-						var arr = {};
-					    for (var key in grunt.filerev.summary) {
-					        arr[key.replace(/\\/g, "/").replace("src/main/webapp","")] = 
-					        	grunt.filerev.summary[key].replace(/\\/g, "/").replace("src/main/webapp","");
-					    }
-            			grunt.log.debug(JSON.stringify(arr));
-					    var path = (arr[block.dest] !== undefined) ? arr[block.dest] : block.dest;
-            			grunt.log.debug(JSON.stringify(path));
+						var path = path2filerev(block);
 						return '<script src="${contextPath}' + path + '"></script>';
 					}
 				}
