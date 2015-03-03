@@ -116,7 +116,23 @@ module.exports = function(grunt) {
 						return '<link rel="stylesheet" href="${contextPath}' + block.dest + '"/>';
 					},
 					js: function (block) {
-						return '<script src="${contextPath}' + block.dest + '"></script>';
+						grunt.log.debug(JSON.stringify(config.webapp));
+						grunt.log.debug(JSON.stringify(block.dest));
+            			grunt.log.debug(JSON.stringify(grunt.filerev.summary));
+						// Seems like filerev should match with windows-compatible filenames in the summary ...
+						// https://github.com/cbas/grunt-filerev/commit/1dfe96cec9850e1812c9aead45ba5c07cd1f8a1d
+						// ... but it doesn't. 
+						// So instead, we need to monkey path it here, per example in this thread:
+						// http://stackoverflow.com/questions/26769093/grunt-usemin-not-replacing-reference-block-with-revved-file-line
+						var arr = {};
+					    for (var key in grunt.filerev.summary) {
+					        arr[key.replace(/\\/g, "/").replace("src/main/webapp","")] = 
+					        	grunt.filerev.summary[key].replace(/\\/g, "/").replace("src/main/webapp","");
+					    }
+            			grunt.log.debug(JSON.stringify(arr));
+					    var path = (arr[block.dest] !== undefined) ? arr[block.dest] : block.dest;
+            			grunt.log.debug(JSON.stringify(path));
+						return '<script src="${contextPath}' + path + '"></script>';
 					}
 				}
 			}
